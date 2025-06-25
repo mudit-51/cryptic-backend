@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from typing import TypedDict
@@ -57,6 +58,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/filelist")
@@ -216,6 +224,7 @@ async def grant_access(file_name: str, owner_id: str, requester_id: str, grant: 
         "message": "Access granted successfully.",
     }
 
+
 @app.get("/revokeaccess")
 async def revoke_access(file_name: str, owner_id: str, requester_id: str):
     if not file_name or not owner_id or not requester_id:
@@ -232,6 +241,7 @@ async def revoke_access(file_name: str, owner_id: str, requester_id: str):
         return {"error": "Failed to revoke access. Please check the details."}
     return {"message": "Access revoked successfully."}
 
+
 @app.delete("/deletefile")
 async def delete_file(file_name: str, client_id: str):
     if not file_name or not client_id:
@@ -246,5 +256,5 @@ async def delete_file(file_name: str, client_id: str):
         granted_file_collection.delete_many({"file_name": file_name, "client_id": client_id})
     except:
         return {"error": "Failed to delete the file. Please check the details."}
-    
+
     return {"message": "File deleted successfully."}
