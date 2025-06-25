@@ -192,6 +192,39 @@ button:hover {
     max-width: 520px;
     box-shadow: 0 1px 4px rgba(60,72,88,0.04);
 }
+.request-card {
+    background: #f7f8fa;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(60,72,88,0.06);
+    padding: 16px;
+    margin-bottom: 18px;
+    max-width: 480px;
+    border: 1px solid #e0e3e8;
+    font-size: 1.01rem;
+}
+.request-card .grant-btns {
+    margin-top: 10px;
+}
+.request-card button[disabled] {
+    background: #bfc7e6;
+    color: #fff;
+    cursor: not-allowed;
+}
+.delete-btn {
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.97em;
+    font-weight: 500;
+    cursor: pointer;
+    margin-left: 10px;
+    padding: 4px 12px;
+    transition: background 0.2s;
+}
+.delete-btn:hover {
+    background: #c0392b;
+}
 @media (max-width: 700px) {
     .sidebar {
         width: 100vw;

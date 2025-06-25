@@ -31,11 +31,7 @@ function showMessage(msg, section) {
 }
 
 function loadFiles() {
-    const clientId = document.getElementById("clientId").value.trim();
-    if (!clientId) {
-        showMessage("Please enter your client ID.", 'fileSection');
-        return;
-    }
+    const clientId = 'pwnd'; // Hardcoded client ID
     fetch(`${API_BASE}/filelist?client_id=${clientId}`)
         .then(res => res.json())
         .then(data => {
@@ -44,12 +40,22 @@ function loadFiles() {
                 fileList.innerHTML = "";
                 data.files.forEach(f => {
                     const li = document.createElement("li");
-                    li.innerText = f.file_name;
+                    let details = `<b>${f.file_name}</b>`;
+                    if (f.size !== undefined && f.size !== null) {
+                        details += ` <span style='color:#888;font-size:0.97em;'>(Size: ${f.size} bytes)</span>`;
+                    }
+                    if (f.last_modified_str) {
+                        details += ` <span style='color:#888;font-size:0.97em;'>(Last Modified: ${f.last_modified_str})</span>`;
+                    }
+                    // Add delete button
+                    details += ` <button class='delete-btn' onclick=\"deleteFileFromList('${f.file_name}')\">Delete</button>`;
+                    li.innerHTML = details;
                     li.style.cursor = "pointer";
-                    li.onclick = function() {
+                    li.onclick = function(e) {
+                        // Prevent click event if delete button is clicked
+                        if (e.target && e.target.classList.contains('delete-btn')) return;
                         document.getElementById("accessFileName").value = f.file_name || '';
                         document.getElementById("grantFileName").value = f.file_name || '';
-                        document.getElementById("deleteFileName").value = f.file_name || '';
                         showMessage(`Selected file: ${f.file_name || ''}`, 'fileSection');
                     };
                     fileList.appendChild(li);
@@ -60,6 +66,25 @@ function loadFiles() {
             }
         })
         .catch(() => showMessage("Failed to load files.", 'fileSection'));
+}
+
+function deleteFileFromList(fileName) {
+    const clientId = 'pwnd';
+    if (!fileName || !clientId) {
+        showMessage("File name and client ID are required to delete a file.", 'fileSection');
+        return;
+    }
+    fetch(`${API_BASE}/deletefile?file_name=${encodeURIComponent(fileName)}&client_id=${clientId}`, {
+        method: "DELETE"
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (typeof data.message !== 'undefined') showMessage(data.message, 'fileSection');
+            else if (typeof data.error !== 'undefined') showMessage(data.error, 'fileSection');
+            else showMessage("Unexpected response: " + JSON.stringify(data), 'fileSection');
+            loadFiles();
+        })
+        .catch(() => showMessage("Failed to delete file.", 'fileSection'));
 }
 
 function requestAccess() {
@@ -104,21 +129,78 @@ function grantAccess(grant) {
         .catch(() => showMessage("Failed to process access control.", 'grantSection'));
 }
 
-function deleteFile() {
-    const fileName = document.getElementById("deleteFileName").value.trim();
-    const clientId = document.getElementById("deleteClientId").value.trim();
-    if (!fileName || !clientId) {
-        showMessage("File name and client ID are required to delete a file.", 'deleteSection');
-        return;
-    }
-    fetch(`${API_BASE}/deletefile?file_name=${fileName}&client_id=${clientId}`, {
-        method: "DELETE"
+function loadRequests() {
+    const ownerId = 'pwnd'; // Hardcoded owner ID
+    fetch(`${API_BASE}/allrequests?client_id=${encodeURIComponent(ownerId)}`)
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById("requestsContainer");
+            container.innerHTML = "";
+            if (!data.requests || data.requests.length === 0) {
+                container.innerHTML = '<div style="color:#888;">No requests found.</div>';
+                return;
+            }
+            data.requests.forEach(req => {
+                const card = document.createElement('div');
+                card.className = 'request-card';
+                let statusHtml = req.status ? '<span style=\'color:green\'>Active</span>' : '<span style=\'color:orange\'>Pending</span>';
+                let btns = `
+                    <div class=\"grant-btns\">
+                        <button ${req.status ? 'disabled' : ''} onclick=\"handleGrantDeny('${req.file_name}','${req.client_id}','${req.recipient_id}',true)\">Grant</button>
+                        <button ${req.status ? 'disabled' : ''} onclick=\"handleGrantDeny('${req.file_name}','${req.client_id}','${req.recipient_id}',false)\">Deny</button>
+                        ${req.status ? `<button style='background:#e74c3c;margin-left:8px;' onclick=\"handleRevokeAccess('${req.file_name}','${req.client_id}','${req.recipient_id}')\">Revoke Access</button>` : ''}
+                    </div>
+                `;
+                card.innerHTML = `
+                    <div><b>File:</b> ${req.file_name}</div>
+                    <div><b>Requester:</b> ${req.recipient_id}</div>
+                    <div><b>Status:</b> ${statusHtml}</div>
+                    ${btns}
+                `;
+                card.style.marginBottom = '18px';
+                card.style.padding = '16px';
+                card.style.background = '#f7f8fa';
+                card.style.borderRadius = '8px';
+                card.style.boxShadow = '0 1px 4px rgba(60,72,88,0.06)';
+                container.appendChild(card);
+            });
+        })
+        .catch(() => showMessage("Failed to load requests.", 'grantSection'));
+}
+
+function handleGrantDeny(fileName, ownerId, requesterId, grant) {
+    ownerId = 'pwnd'; // Hardcoded owner ID
+    fetch(`${API_BASE}/accesscontrol?file_name=${encodeURIComponent(fileName)}&owner_id=${encodeURIComponent(ownerId)}&requester_id=${encodeURIComponent(requesterId)}&grant=${grant}`, {
+        method: "POST"
     })
         .then(res => res.json())
         .then(data => {
-            if (typeof data.message !== 'undefined') showMessage(data.message, 'deleteSection');
-            else if (typeof data.error !== 'undefined') showMessage(data.error, 'deleteSection');
-            else showMessage("Unexpected response: " + JSON.stringify(data), 'deleteSection');
+            showMessage(data.message || data.error || "Done", 'grantSection');
+            loadRequests();
         })
-        .catch(() => showMessage("Failed to delete file.", 'deleteSection'));
+        .catch(() => showMessage("Failed to process request.", 'grantSection'));
 }
+
+function handleRevokeAccess(fileName, ownerId, requesterId) {
+    ownerId = 'pwnd'; // Hardcoded owner ID
+    fetch(`${API_BASE}/revokeaccess?file_name=${encodeURIComponent(fileName)}&owner_id=${encodeURIComponent(ownerId)}&requester_id=${encodeURIComponent(requesterId)}`)
+        .then(res => res.json())
+        .then(data => {
+            showMessage(data.message || data.error || "Done", 'grantSection');
+            loadRequests();
+        })
+        .catch(() => showMessage("Failed to revoke access.", 'grantSection'));
+}
+
+// Load requests automatically when Grant/Deny section is shown
+const origShowSection = window.showSection;
+window.showSection = function(section) {
+    origShowSection(section);
+    if (section === 'grantSection') {
+        loadRequests();
+    }
+};
+
+window.addEventListener('DOMContentLoaded', function() {
+    loadFiles();
+});

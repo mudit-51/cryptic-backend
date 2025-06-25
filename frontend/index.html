@@ -17,7 +17,6 @@
                 <li><a href="#" onclick="showSection('fileSection')" id="nav-files" class="active">My Files</a></li>
                 <li><a href="#" onclick="showSection('accessSection')" id="nav-access">Request Access</a></li>
                 <li><a href="#" onclick="showSection('grantSection')" id="nav-grant">Grant/Deny</a></li>
-                <li><a href="#" onclick="showSection('deleteSection')" id="nav-delete">Delete</a></li>
             </ul>
         </nav>
     </div>
@@ -25,7 +24,8 @@
         <div class="section" id="fileSection">
             <div class="section-header">
                 <label for="clientId">Client ID:</label>
-                <input type="text" id="clientId" value="pwnd" readonly>
+                <input type="text" id="clientId" value="pwnd" readonly style="display:none;">
+                <span style="font-weight:600; color:#4053c7;">pwnd</span>
                 <button onclick="loadFiles()">Load My Files</button>
             </div>
             <ul id="fileList"></ul>
@@ -41,7 +41,8 @@
             </div>
             <div class="form-group">
                 <label for="requesterId">Requester ID</label>
-                <input type="text" id="requesterId" value="client2" readonly>
+                <input type="text" id="requesterId" value="client2" readonly style="display:none;">
+                <span style="font-weight:600; color:#4053c7;">client2</span>
             </div>
             <button onclick="requestAccess()">Request Access</button>
             <div id="message-access" class="message"></div>
@@ -49,39 +50,10 @@
         <div class="section" id="grantSection" style="display:none;">
             <div class="section-header">
                 <h2>Grant/Deny Access</h2>
+                <button onclick="loadRequests()" style="margin-left:auto;">Refresh</button>
             </div>
-            <div class="form-group">
-                <label for="grantFileName">File name</label>
-                <input type="text" id="grantFileName" placeholder="File name">
-            </div>
-            <div class="form-group">
-                <label for="ownerId">Owner ID</label>
-                <input type="text" id="ownerId" value="pwnd" readonly>
-            </div>
-            <div class="form-group">
-                <label for="grantRequesterId">Requester ID</label>
-                <input type="text" id="grantRequesterId" value="client2" readonly>
-            </div>
-            <div class="grant-btns">
-                <button onclick="grantAccess(true)">Grant</button>
-                <button onclick="grantAccess(false)">Deny</button>
-            </div>
+            <div id="requestsContainer"></div>
             <div id="message-grant" class="message"></div>
-        </div>
-        <div class="section" id="deleteSection" style="display:none;">
-            <div class="section-header">
-                <h2>Delete a File</h2>
-            </div>
-            <div class="form-group">
-                <label for="deleteFileName">File name</label>
-                <input type="text" id="deleteFileName" placeholder="File name">
-            </div>
-            <div class="form-group">
-                <label for="deleteClientId">Client ID</label>
-                <input type="text" id="deleteClientId" value="pwnd" readonly>
-            </div>
-            <button onclick="deleteFile()">Delete</button>
-            <div id="message-delete" class="message"></div>
         </div>
     </div>
     <script src="script.js"></script>
@@ -90,12 +62,10 @@
         document.getElementById('fileSection').style.display = section === 'fileSection' ? 'block' : 'none';
         document.getElementById('accessSection').style.display = section === 'accessSection' ? 'block' : 'none';
         document.getElementById('grantSection').style.display = section === 'grantSection' ? 'block' : 'none';
-        document.getElementById('deleteSection').style.display = section === 'deleteSection' ? 'block' : 'none';
         // Update sidebar active state
         document.getElementById('nav-files').classList.toggle('active', section === 'fileSection');
         document.getElementById('nav-access').classList.toggle('active', section === 'accessSection');
         document.getElementById('nav-grant').classList.toggle('active', section === 'grantSection');
-        document.getElementById('nav-delete').classList.toggle('active', section === 'deleteSection');
     }
     // Show files by default
     showSection('fileSection');

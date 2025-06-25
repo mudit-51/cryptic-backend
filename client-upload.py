@@ -48,7 +48,7 @@ proxy_db = client["proxy-keystore"]
 proxy_collection: Collection[ClientKeyPair] = proxy_db["proxy_public_keylist"]
 
 file_name = input("Enter the file name to encrypt and upload: ")
-a_id = input("Enter your client id: ")
+a_id = "pwnd"
 
 a_sk = SecretKey.random()
 a_pk = a_sk.public_key()

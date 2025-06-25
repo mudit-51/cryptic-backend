@@ -34,12 +34,15 @@ class EncryptedFile(TypedDict):
     capsule: list[bytes]
     ciphertext: list[bytes]
     client_id: str
+    size: int
+    last_modified: list[int]
 
 
 class AccessRequest(TypedDict):
     file_name: str
     client_id: str
     recipient_id: str
+    status: bool
 
 
 class GrantedFile(TypedDict):
@@ -74,12 +77,36 @@ async def get_file_list(client_id: str = ""):
     file_db = app.state.mongoclient["cryptic"]
     file_collection: Collection[EncryptedFile] = file_db["encrypted_files"]
 
-    temp = file_collection.find({"client_id": client_id})
     file_list = list(
-        file_collection.find({"client_id": client_id}, {"_id": 0, "file_name": 1})
+        file_collection.find({"client_id": client_id}, {"_id": 0, "file_name": 1, "size": 1, "last_modified": 1})
     )
-    return {"files": file_list}
+    # Prepare a new list with processed fields (avoid mutating TypedDict)
+    processed_files = []
+    for f in file_list:
+        processed = dict(f)
+        if "last_modified" in processed and isinstance(processed["last_modified"], list) and len(processed["last_modified"]) >= 6:
+            d = processed["last_modified"]
+            processed["last_modified_str"] = f"{d[0]:04d}-{d[1]:02d}-{d[2]:02d} {d[3]:02d}:{d[4]:02d}:{d[5]:02d} UTC"
+        else:
+            processed["last_modified_str"] = "Unknown"
+        if "size" not in processed:
+            processed["size"] = None
+        processed_files.append(processed)
+    return {"files": processed_files}
 
+
+@app.get("/allrequests")
+async def get_all_requests(client_id: str):
+    if not client_id:
+        return {"error": "Client ID is required."}
+
+    proxy_db = app.state.mongoclient["proxy-keystore"]
+    access_request_collection: Collection[AccessRequest] = proxy_db["access_requests"]
+
+    requests = list(
+        access_request_collection.find({"client_id": client_id}, {"_id": 0})
+    )
+    return {"requests": requests}
 
 @app.post("/accessrequest")
 async def access_request(file_name: str, client_id: str, requester_id: str):
@@ -140,6 +167,7 @@ async def access_request(file_name: str, client_id: str, requester_id: str):
             "file_name": file_name,
             "client_id": client_id,
             "recipient_id": requester_id,
+            "status": False,  
         }
     )
     return {"message": "Access request submitted successfully."}
@@ -220,6 +248,10 @@ async def grant_access(file_name: str, owner_id: str, requester_id: str, grant: 
             "cfrags": cfrags,
         }
     )
+    access_request_collection.update_one(
+        {"file_name": file_name, "client_id": owner_id, "recipient_id": requester_id},
+        {"$set": {"status": True}}, 
+    )
     return {
         "message": "Access granted successfully.",
     }
@@ -231,11 +263,16 @@ async def revoke_access(file_name: str, owner_id: str, requester_id: str):
         return {"error": "File name, owner ID, and requester ID are required."}
 
     file_db = app.state.mongoclient["cryptic"]
+    proxy_db = app.state.mongoclient["proxy-keystore"]
     granted_file_collection: Collection[GrantedFile] = file_db["granted_files"]
+    access_request_collection: Collection[AccessRequest] = proxy_db["access_requests"]
 
     try:
         granted_file_collection.delete_one(
             {"file_name": file_name, "client_id": owner_id, "requester_id": requester_id}
+        )
+        access_request_collection.delete_one(
+            {"file_name": file_name, "client_id": owner_id, "recipient_id": requester_id}
         )
     except:
         return {"error": "Failed to revoke access. Please check the details."}
@@ -251,9 +288,13 @@ async def delete_file(file_name: str, client_id: str):
     file_collection: Collection[EncryptedFile] = file_db["encrypted_files"]
     granted_file_collection: Collection[GrantedFile] = file_db["granted_files"]
 
+    proxy_db = app.state.mongoclient["proxy-keystore"]
+    access_request_collection: Collection[AccessRequest] = proxy_db["access_requests"]
+
     try:
         file_collection.delete_one({"file_name": file_name, "client_id": client_id})
         granted_file_collection.delete_many({"file_name": file_name, "client_id": client_id})
+        access_request_collection.delete_many({"file_name": file_name, "client_id": client_id})
     except:
         return {"error": "Failed to delete the file. Please check the details."}
 
