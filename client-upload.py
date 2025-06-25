@@ -7,11 +7,13 @@ from umbral import (
     reencrypt,
     decrypt_reencrypted,
 )
+from time import gmtime
 
 from pymongo import MongoClient
 from pymongo.database import Database
 from pymongo.collection import Collection
 from typing import TypedDict
+import os
 
 
 class ClientKeyPair(TypedDict):
@@ -30,6 +32,8 @@ class EncryptedFile(TypedDict):
     capsule: list[bytes]
     ciphertext: list[bytes]
     client_id: str
+    size: int
+    last_modified: list[int]
 
 
 uri = "mongodb://localhost:27017/"
@@ -88,15 +92,19 @@ a_signer = Signer(a_signing)
 
 capsules = []
 ciphertexts = []
+
+file_size = 0
 try:
+    file_size = os.path.getsize(file_name)
     with open(file_name, "r") as f:
         for line in f:
             capsule, ciphertext = encrypt(a_pk, line.encode())
             capsules.append(capsule.__bytes__())
             ciphertexts.append(ciphertext)
-except FileNotFoundError:
+except OSError:
     print(f"File {file_name} not found.")
     exit(1)
+
 
 file_collection.update_one(
     filter={"file_name": file_name, "client_id": a_id},
@@ -105,6 +113,8 @@ file_collection.update_one(
             "capsule": capsules,
             "ciphertext": ciphertexts,
             "client_id": a_id,
+            "size": file_size, 
+            "last_modified": gmtime(), 
         }
     },
     upsert=True,

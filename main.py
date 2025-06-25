@@ -215,3 +215,36 @@ async def grant_access(file_name: str, owner_id: str, requester_id: str, grant: 
     return {
         "message": "Access granted successfully.",
     }
+
+@app.get("/revokeaccess")
+async def revoke_access(file_name: str, owner_id: str, requester_id: str):
+    if not file_name or not owner_id or not requester_id:
+        return {"error": "File name, owner ID, and requester ID are required."}
+
+    file_db = app.state.mongoclient["cryptic"]
+    granted_file_collection: Collection[GrantedFile] = file_db["granted_files"]
+
+    try:
+        granted_file_collection.delete_one(
+            {"file_name": file_name, "client_id": owner_id, "requester_id": requester_id}
+        )
+    except:
+        return {"error": "Failed to revoke access. Please check the details."}
+    return {"message": "Access revoked successfully."}
+
+@app.delete("/deletefile")
+async def delete_file(file_name: str, client_id: str):
+    if not file_name or not client_id:
+        return {"error": "File name and client ID are required."}
+
+    file_db = app.state.mongoclient["cryptic"]
+    file_collection: Collection[EncryptedFile] = file_db["encrypted_files"]
+    granted_file_collection: Collection[GrantedFile] = file_db["granted_files"]
+
+    try:
+        file_collection.delete_one({"file_name": file_name, "client_id": client_id})
+        granted_file_collection.delete_many({"file_name": file_name, "client_id": client_id})
+    except:
+        return {"error": "Failed to delete the file. Please check the details."}
+    
+    return {"message": "File deleted successfully."}

@@ -60,7 +60,7 @@ proxy_db = client["proxy-keystore"]
 proxy_collection: Collection[ClientKeyPair] = proxy_db["proxy_public_keylist"]
 
 # Prompt for file and user info
-file_name = "test.txt"
+file_name = "requirements.txt"
 owner_id = "pwnd"
 r_id = "client2"
 
@@ -104,7 +104,6 @@ for idx, (capsule_bytes, ciphertext) in enumerate(zip(enc_file["capsule"], enc_f
         ciphertext=ciphertext,
     )
     decrypted_lines.append(cleartext.decode())
-    print(f"Decrypted line {idx}: {decrypted_lines[-1]}")
 
 print("Decrypted file content:")
 print("".join(decrypted_lines))
