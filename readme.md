@@ -3,6 +3,10 @@
 
 A secure file sharing system built using **Proxy Re-encryption** (PRE) technology with FastAPI backend and a web frontend. This system enables secure file sharing where files remain encrypted at all times, and access can be granted/revoked without exposing the original data.
 
+<div align="center">
+<img src="https://github.com/user-attachments/assets/427ca931-fdcf-4d90-86dd-7d533d0e4df2" alt="Cryptic File Manager Interface" width="800">
+</div>
+
 ## What is Proxy Re-encryption?
 
 **Proxy Re-encryption** is a cryptographic technique that allows a semi-trusted proxy to transform ciphertexts encrypted under one public key into ciphertexts encrypted under another public key, without the proxy learning anything about the underlying plaintext.
